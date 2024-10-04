@@ -1,4 +1,4 @@
-from model_VGG import ClassificationModel
+from model import ClassificationModel
 from utils import Label_Map
 
 import torch
@@ -41,7 +41,7 @@ class CustomDataset(Dataset):
 
 def test():
     test_dir = "./dataset/test"
-    weight_path = "./weights/w_313581001_VGG_67.pth"
+    weight_path = "./w_313581001.pth"
     LoadDataset(test_dir)
     dataset = CustomDataset(test_dir)
 
@@ -55,7 +55,7 @@ def test():
     model.to(device)
     model.eval()
 
-    with open('pred_313581001_VGG.csv', mode='w', newline='') as file:
+    with open('pred_313581001.csv', mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['file_name', 'pred1', 'pred2', 'pred3', 'pred4', 'pred5'])
 

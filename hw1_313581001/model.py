@@ -34,7 +34,7 @@ class ClassificationModel(nn.Module):
         self.pool3 = nn.AdaptiveAvgPool2d(14) 
         self.conv2 = nn.Sequential(nn.Conv2d(32, 32, kernel_size=3, padding=1),
                                         nn.BatchNorm2d(32),nn.ReLU(inplace=True))
-        self.pool4 = nn.AdaptiveAvgPool2d(2) # normal:4 small:2
+        self.pool4 = nn.AdaptiveAvgPool2d(2)
         self.fc = nn.Linear(128, num_classes)
 
     def forward(self, x):

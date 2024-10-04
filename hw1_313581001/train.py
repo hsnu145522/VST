@@ -135,11 +135,11 @@ def train():
             best_accuracy_overall = best_accuracy
             best_model_wts_overall = best_model_wts
             model.load_state_dict(best_model_wts_overall)
-            torch.save(model.state_dict(), f'w_313581001_fold{fold + 1}_smaller.pth')
+            torch.save(model.state_dict(), f'w_313581001_fold{fold + 1}.pth')
 
     print(f'Best validation loss overall: {best_loss_overall:.4f}, TOp-5 Accuracy: {best_accuracy_overall:.2f}%')
     model.load_state_dict(best_model_wts_overall)
-    torch.save(model.state_dict(), 'w_313581001_smaller.pth')
+    torch.save(model.state_dict(), 'w_313581001.pth')
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
