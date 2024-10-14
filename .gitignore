@@ -1,0 +1,8 @@
+        VST/
+        hw1/__pycache__/
+        hw1/dataset/
+        hw1/hw1_313581001.zip
+        hw1/model_VGG.py
+        hw1/pred_313581001.csv
+        hw1/w_313581001.pth
+        hw1/weights/
