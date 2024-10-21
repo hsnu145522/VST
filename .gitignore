@@ -5,3 +5,10 @@ hw1/hw1_313581001.zip
 hw1/pred_313581001.csv
 hw1/w_313581001.pth
 hw1/weights/
+hw2/hw2/
+hw2/Object-Detection-Metrics
+hw2/YOLOX/datasets/dataset/
+hw2/YOLOX/myresult/
+hw2/YOLOX/weights/
+hw2/YOLOX/YOLOX_outputs/
+hw2/YOLOX/.*
