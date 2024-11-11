@@ -19,6 +19,7 @@ def main(video_path):
         if not ret:
             break
 
+        tracker.setup(frame.shape[1], frame.shape[0])
         # Step 1: Object Detection
         current_bboxs = detector.detect(frame)
         
@@ -33,22 +34,33 @@ def main(video_path):
         tracker.update(current_bboxs, features)
         print("Current tracks: ", end="")
         for track in tracker.trackers:
-            print(track.track_id, end=" ")
+            print(track.track_id+1, end=" ")
         print("")
 
         # Step 4: Draw Tracks
         for track in tracker.trackers:
             x1, y1, x2, y2 = map(int, track.bbox)
             cv2.rectangle(frame, (x1, y1), (x2, y2), track.color, 2)
-            cv2.putText(frame, str(track.track_id), (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, track.color, 2)
+            cv2.putText(frame, str(track.track_id+1), (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
+            cv2.putText(frame, f"{track.calculate_average_speed():.2f}", (x1+40, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
+            for i in range(1, len(track.bbox_history)):
+                age = (len(track.bbox_history)-i) / len(track.bbox_history)
+                # line_opacity = int(255 * (1 - age))  # Older lines are less opaque
+                line_thickness = max(1, int(5 * (1 - age)))  # Line gets thinner as it ages
+                
+                # faded_color = (int(track.color[0] * line_opacity), int(track.color[1] * line_opacity), int(track.color[2] * line_opacity))
+                cv2.line(frame, 
+                     (int(track.bbox_history[i - 1][0]), int(track.bbox_history[i - 1][1])), 
+                     (int(track.bbox_history[i][0]), int(track.bbox_history[i][1])), 
+                     track.color, line_thickness)  # Green line for trajectory
 
-        cv2.putText(frame, f'count: {tracker.next_id-1}', (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3)
+        cv2.putText(frame, f'count: {tracker.next_id}', (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3)
         out.write(frame)
         # cv2.imshow("Deep SORT Tracking", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     print(f'-' * 30)
-    print(f'Count : {tracker.next_id-1}')  # next_id now reflects the total count
+    print(f'Count : {tracker.next_id}')  # next_id now reflects the total count
     print(f'-' * 30)
 
     cap.release()
