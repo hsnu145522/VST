@@ -42,7 +42,7 @@ def main(video_path):
             x1, y1, x2, y2 = map(int, track.bbox)
             cv2.rectangle(frame, (x1, y1), (x2, y2), track.color, 2)
             cv2.putText(frame, str(track.track_id+1), (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
-            cv2.putText(frame, f"{track.calculate_average_speed():.2f}", (x1+40, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
+            cv2.putText(frame, f"{track.calculate_speed():.2f}", (x1+40, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
             for i in range(1, len(track.bbox_history)):
                 age = (len(track.bbox_history)-i) / len(track.bbox_history)
                 # line_opacity = int(255 * (1 - age))  # Older lines are less opaque
@@ -56,7 +56,7 @@ def main(video_path):
 
         cv2.putText(frame, f'count: {tracker.next_id}', (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3)
         out.write(frame)
-        # cv2.imshow("Deep SORT Tracking", frame)
+        cv2.imshow("Tracking", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     print(f'-' * 30)
@@ -67,4 +67,4 @@ def main(video_path):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    main("videos/hard_9.mp4")
+    main("videos/easy_9.mp4")

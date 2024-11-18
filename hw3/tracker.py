@@ -146,9 +146,11 @@ class Track:
         color_bgr = cv2.cvtColor(color_hsv, cv2.COLOR_HSV2BGR)[0][0]
         return tuple(int(c) for c in color_bgr)
 
-    def calculate_average_speed(self, frame_rate=30):
+    def calculate_speed(self, frame_rate=30):
         total_distance = 0.0
-        for i in range(1, len(self.bbox_history)):
+        end = max(1, len(self.bbox_history)-frame_rate)
+        time = len(self.bbox_history)-end
+        for i in range(len(self.bbox_history)-1, end, -1):
             # Calculate distance between consecutive points
             point1 = self.bbox_history[i - 1]
             point2 = self.bbox_history[i]
@@ -156,7 +158,7 @@ class Track:
             total_distance += distance
         
         # Average speed per frame (in pixels)
-        self.speed = total_distance / (len(self.bbox_history) - 1) if len(self.bbox_history) > 1 else 0
+        self.speed = total_distance / time if len(self.bbox_history) > 1 else 0
         return self.speed
 
         
