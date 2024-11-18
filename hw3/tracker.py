@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-# from filterpy.kalman import KalmanFilter
 import cv2
 import math
 
@@ -35,8 +34,7 @@ class Tracker:
     def __init__(self):
         self.trackers = []
         self.disappeared_trackers = []
-        self.max_age = 10
-        self.min_hits = 3
+        self.max_age = 15
         self.next_id = 0
         self.width = 0
         self.height = 0
@@ -99,10 +97,18 @@ class Tracker:
             self.trackers[t].update(current_bboxs[d], features[d])
 
         # Handle disappered_trackers
+        delete_tracks = []
         for t in disappered_trackers:
             self.trackers[t].age += 1
             if self.trackers[t].age > self.max_age:
-                self.trackers.pop(t)
+                delete_tracks.append(t)
+        
+        temp_trackers = []
+        for t in range(len(self.trackers)):
+            if t not in delete_tracks:
+                temp_trackers.append(self.trackers[t])
+        
+        self.trackers = temp_trackers
 
         # Create new trackers for unmatched detections
         for d in new_detections:
@@ -121,8 +127,6 @@ class Track:
         self.bbox = bbox
         self.feature = feature
         self.track_id = track_id
-        # self.kalman_filter = KalmanFilter(dim_x=7, dim_z=4)
-        # self.kalman_filter.x[:4] = np.reshape(bbox, (4, 1))  # Initialize Kalman state with bbox
         self.age = 0
         self.color = self.get_unique_color()
         self.bbox_history = [self.get_center(bbox)]
