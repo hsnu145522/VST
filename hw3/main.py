@@ -67,4 +67,4 @@ def main(video_path):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    main("videos/easy_9.mp4")
+    main("videos/hard_9.mp4")

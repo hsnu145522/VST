@@ -1,26 +1,9 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from filterpy.kalman import KalmanFilter
+# from filterpy.kalman import KalmanFilter
 import cv2
 import math
 
-def is_near_edge(bbox, frame_width, frame_height, edge_ratio):
-    x1, y1, x2, y2 = bbox
-    return x1 < frame_width * edge_ratio or x2 > frame_width * (1 - edge_ratio) or y1 < frame_height * edge_ratio or y2 > frame_height * (1 - edge_ratio)
-
-def find_nearest_disappeared_id(bbox, disappeared_buffer, frame_width, frame_height):
-    nearest_id = None
-    min_distance = math.sqrt((frame_width / 5) ** 2 + (frame_height / 5) ** 2)  # Set a large distance as the initial value
-    cb_center = np.array([(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2])
-
-    for disappeared_id, (db_bbox, _) in disappeared_buffer.items():
-        db_center = np.array([(db_bbox[0] + db_bbox[2]) / 2, (db_bbox[1] + db_bbox[3]) / 2])
-        distance = np.linalg.norm(cb_center - db_center)
-        print(f'distance: {distance}, min_distance: {min_distance}, disappeared_id: {disappeared_id}, dp_bbox: {db_bbox}')
-        if distance < min_distance:
-            min_distance = distance
-            nearest_id = disappeared_id
-    return nearest_id
 
 def IOU(bbox1, bbox2):
     x1, y1, x2, y2 = bbox1
@@ -61,6 +44,8 @@ class Tracker:
     def update(self, current_bboxs, features, iou_weight=0.5, reid_weight=0.5):
         n_detections = len(current_bboxs)
         n_tracks = len(self.trackers)
+
+        # First frame
         if n_tracks == 0 or n_detections == 0:
             unmatched_detections = set(range(n_detections))
             unmatched_trackers = set(range(n_tracks))
@@ -78,16 +63,6 @@ class Tracker:
 
             return  
 
-        # if n_tracks < n_detections:
-        #     new_trackers = []
-        #     for i in range(n_tracks, n_detections):
-        #         bbox = current_bboxs[i].copy()
-        #         if is_near_edge(bbox, self.width, self.height, 0.05):
-        #             new_trackers.append(current_bboxs[i])
-        #     current_bboxs = current_bboxs[:n_tracks+1]
-        #     for track in new_trackers:
-        #         np.append(current_bboxs, track)
-
         # Assign detections to existing trackers using Hungarian algorithm
         cost_matrix = np.zeros((len(self.trackers), len(current_bboxs)), dtype=np.float32)
         iou_cost_matrix = np.zeros((len(self.trackers), len(current_bboxs)), dtype=np.float32)
@@ -95,7 +70,7 @@ class Tracker:
         for t, tracker in enumerate(self.trackers):
             for d, bbox in enumerate(current_bboxs):
                 reid_loss = np.linalg.norm(tracker.feature - features[d])  # ReID feature distance
-                iou_loss = 1 - IOU(tracker.bbox, bbox)
+                iou_loss = 1 - IOU(tracker.bbox, bbox) # IOU loss
                 iou_cost_matrix[t, d] = iou_loss
                 reid_cost_matrix[t, d] = reid_loss
         
@@ -146,8 +121,8 @@ class Track:
         self.bbox = bbox
         self.feature = feature
         self.track_id = track_id
-        self.kalman_filter = KalmanFilter(dim_x=7, dim_z=4)
-        self.kalman_filter.x[:4] = np.reshape(bbox, (4, 1))  # Initialize Kalman state with bbox
+        # self.kalman_filter = KalmanFilter(dim_x=7, dim_z=4)
+        # self.kalman_filter.x[:4] = np.reshape(bbox, (4, 1))  # Initialize Kalman state with bbox
         self.age = 0
         self.color = self.get_unique_color()
         self.bbox_history = [self.get_center(bbox)]
@@ -159,13 +134,12 @@ class Track:
         self.bbox_history.append(self.get_center(bbox))
     
     def get_center(self, bbox):
-        # x, y, w, h = map(int, bbox)
         x1, y1, x2, y2 = bbox
         output = ((x1+x2)/2, (y1+y2)/2)
         cx, cy = map(int, output)
         return (cx, cy)  # Return center (cx, cy)
 
-    def get_unique_color(self, max_ids=15):
+    def get_unique_color(self, max_ids=20):
         # Scale the hue by the ID to get a wide range of colors
         hue = int((float(self.track_id) / max_ids) * 180)
         color_hsv = np.uint8([[[hue, 255, 255]]])  # Saturation and Value are set to max
@@ -183,8 +157,6 @@ class Track:
         
         # Average speed per frame (in pixels)
         self.speed = total_distance / (len(self.bbox_history) - 1) if len(self.bbox_history) > 1 else 0
-        # Convert to pixels per second if needed by multiplying with frame rate
         return self.speed
-        # return self.speed * frame_rate
 
         
