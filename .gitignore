@@ -17,3 +17,5 @@ hw3/yolo11x.pt
 hw3/__pycache__/
 hw3/*.txt
 hw3/*.zip
+hw4/results/
+hw4/VST_HW4.pdf
