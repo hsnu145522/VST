@@ -13,3 +13,7 @@ hw2/YOLOX/weights/
 hw2/YOLOX/YOLOX_outputs/
 hw2/YOLOX/.*
 hw3/videos/
+hw3/yolo11x.pt
+hw3/__pycache__/
+hw3/*.txt
+hw3/*.zip
