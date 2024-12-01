@@ -44,8 +44,22 @@ class AttentionRollout:
 
         """
         # write your code here
-        self.attn_weights = None  # save the attention map into this variable
-        pass
+        B, N, C = x.shape
+        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.head_dim).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv.unbind(0)
+        q, k = self.q_norm(q), self.k_norm(k)
+
+        q = q * self.scale
+        attn = q @ k.transpose(-2, -1)
+        attn = attn.softmax(dim=-1)
+        attn = self.attn_drop(attn)
+        self.attn_weights = attn  # save the attention map into this variable
+        x = attn @ v
+
+        x = x.transpose(1, 2).reshape(B, N, C)
+        x = self.proj(x)
+        x = self.proj_drop(x)
+        return x
     
     def get_attention(self, module, input, output):
         self.attentions.append(module.attn_weights.detach().cpu())
@@ -76,11 +90,26 @@ class AttentionRollout:
 
         """
         result = torch.eye(self.attentions[0].size(-1))
+        fusion_method = "min"
         with torch.no_grad():
             for attention in self.attentions:
                 # Write your code(Attention Rollout) here to update "result" matrix
-                pass
+                
+                # 1. filter the attention by mean/min/max fiter with respect to 3 attention heads
+                if fusion_method == "mean":
+                    fused_attention = attention.mean(dim=1)  # Shape: (batch_size, seq_len, seq_len)
+                elif fusion_method == "min":
+                    fused_attention, _ = attention.min(dim=1)  # Shape: (batch_size, seq_len, seq_len)
+                elif fusion_method == "max":
+                    fused_attention, _ = attention.max(dim=1)  # Shape: (batch_size, seq_len, seq_len)
 
+                fused_attention += torch.eye(fused_attention.size(-1)).to(fused_attention.device)  # Add residual connection
+                # 2. (optional)normalize the attention map of current layer
+                fused_attention /= fused_attention.sum(dim=-1, keepdim=True)  # Normalize rows
+
+                # 3. perform matrix multiplication on current attention map and previous results
+                result = fused_attention @ result
+        
 
 
         """
@@ -88,7 +117,7 @@ class AttentionRollout:
         """
         # Look at the total attention between the class token,
         # and the image patches
-        mask = result[0, 0 , 1 :] # (0 -> batch idx, 0 -> [CLS] token, 1: -> rest tokens)
+        mask = result[0, 0 , 1:] # (0 -> batch idx, 0 -> [CLS] token, 1: -> rest tokens)
         
         # In case of 224x224 image, this brings us from 196 to 14
         width = int(mask.size(-1)**0.5)

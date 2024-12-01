@@ -46,8 +46,22 @@ class GradientRollout:
         """
 
         # write your code here
-        self.attn_weights = None # save the attention map into this variable
-        pass
+        B, N, C = x.shape
+        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.head_dim).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv.unbind(0)
+        q, k = self.q_norm(q), self.k_norm(k)
+
+        q = q * self.scale
+        attn = q @ k.transpose(-2, -1)
+        attn = attn.softmax(dim=-1)
+        attn = self.attn_drop(attn)
+        self.attn_weights = attn  # save the attention map into this variable
+        x = attn @ v
+
+        x = x.transpose(1, 2).reshape(B, N, C)
+        x = self.proj(x)
+        x = self.proj_drop(x)
+        return x
 
     # Define a hook function to extract attention weights
     def get_attention(self, module, input, output):
@@ -89,11 +103,30 @@ class GradientRollout:
 
         """
         result = torch.eye(self.attentions[0].size(-1))
+        fusion_method = "min"
         for attention, grad in zip(self.attentions, self.attention_grads): 
             # Write your code(Gradient Rollout) here to update "result" matrix
-            pass
-        
 
+            # 1. perform matrix mutiplication on current attention map and gradient
+            attention = attention * grad
+
+            # 2. filter the attention by mean/min/max fiter with respect to 3 attention heads
+            if fusion_method == "mean":
+                fused_attention = attention.mean(dim=1)  # Shape: (batch_size, seq_len, seq_len)
+            elif fusion_method == "min":
+                fused_attention, _ = attention.min(dim=1)  # Shape: (batch_size, seq_len, seq_len)
+            elif fusion_method == "max":
+                fused_attention, _ = attention.max(dim=1)  # Shape: (batch_size, seq_len, seq_len)
+            
+            # 3. wipe out all negative values to 0
+            fused_attention[fused_attention < 0] = 0
+
+            fused_attention += torch.eye(fused_attention.size(-1)).to(fused_attention.device)
+            # 4. (optional) normalize the attention map of current layer
+            fused_attention /= fused_attention.sum(dim=-1, keepdim=True)
+
+            # 5. perform matrix multiplication on current attention map and previous results
+            result = fused_attention @ result
 
 
         """
@@ -101,7 +134,7 @@ class GradientRollout:
         """
         # Look at the total attention between the class token,
         # and the image patches
-        mask = result[0, 0 , 1 :]
+        mask = result[0, 0 , 1:]
         # In case of 224x224 image, this brings us from 196 to 14
         width = int(mask.size(-1)**0.5)
         mask = mask.reshape(width, width).numpy()
@@ -127,7 +160,20 @@ class GradientRollout:
         """
 
         # write your code here to perform backpropagation
-        pass
+        # Step 1: Forward pass through the model
+        input_tensor.requires_grad = True  # Enable gradient computation for input
+        outputs = self.model(input_tensor)  # Forward pass
+
+        # Step 2: Define the loss
+        # Option 1: Use logits for the target category
+        loss = outputs[0, target_category]
+        # Option 2: MSE Loss
+        # target = torch.tensor([target_category], device=outputs.device)
+        # loss = torch.nn.functional.cross_entropy(outputs, target)
+
+        # Step 3: Perform backpropagation
+        self.model.zero_grad()  # Clear any existing gradients
+        loss.backward()         # Compute gradients with respect to the loss
         
     def show_mask_on_image(self, img, mask):
 
